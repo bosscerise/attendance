@@ -4,7 +4,19 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime, timedelta
 
-firebase_credentials = st.secrets["FIREBASE_CREDENTIALS"]
+firebase_credentials = {
+    "type": st.secrets["FIREBASE_CREDENTIALS"]["type"],
+    "project_id": st.secrets["FIREBASE_CREDENTIALS"]["project_id"],
+    "private_key_id": st.secrets["FIREBASE_CREDENTIALS"]["private_key_id"],
+    "private_key": st.secrets["FIREBASE_CREDENTIALS"]["private_key"],
+    "client_email": st.secrets["FIREBASE_CREDENTIALS"]["client_email"],
+    "client_id": st.secrets["FIREBASE_CREDENTIALS"]["client_id"],
+    "auth_uri": st.secrets["FIREBASE_CREDENTIALS"]["auth_uri"],
+    "token_uri": st.secrets["FIREBASE_CREDENTIALS"]["token_uri"],
+    "auth_provider_x509_cert_url": st.secrets["FIREBASE_CREDENTIALS"]["auth_provider_x509_cert_url"],
+    "client_x509_cert_url": st.secrets["FIREBASE_CREDENTIALS"]["client_x509_cert_url"],
+    "universe_domain": st.secrets["FIREBASE_CREDENTIALS"]["universe_domain"]
+}
 
 # Firebase setup
 cred = credentials.Certificate(firebase_credentials)
