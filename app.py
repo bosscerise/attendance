@@ -218,12 +218,6 @@ if st.session_state.get('authenticated'):
 else:
         st.warning("Please log in to access these features.")
 
-# Error handling for database operations
-try:
-    # Your database operation code here
-except Exception as e:
-    st.error(f"An error occurred: {str(e)}")
-
 # Main app logic
 if st.session_state.get('authenticated'):
     if page == "Check In/Out":
