@@ -1,9 +1,10 @@
 import streamlit as st
 from st_login_form import login_form
+from datetime import datetime, timedelta
 import firebase_admin
 from firebase_admin import credentials, firestore, initialize_app
-from datetime import datetime, timedelta
 
+# Firebase credentials
 firebase_credentials = {
     "type": st.secrets["FIREBASE_CREDENTIALS"]["type"],
     "project_id": st.secrets["FIREBASE_CREDENTIALS"]["project_id"],
@@ -17,10 +18,18 @@ firebase_credentials = {
     "client_x509_cert_url": st.secrets["FIREBASE_CREDENTIALS"]["client_x509_cert_url"]
 }
 
-# Firebase setup
-cred = credentials.Certificate(firebase_credentials)
-initialize_app(cred)
-db = firestore.client()
+# Initialize Firebase
+def init_firebase():
+    cred = credentials.Certificate(firebase_credentials)
+    try:
+        firebase_admin.get_app()
+    except ValueError:
+        initialize_app(cred)
+    return firestore.client()
+
+
+
+db = init_firebase()
 
 # Hardcoded authentication (simple approach)
 USERNAME = "admin"
