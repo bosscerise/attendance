@@ -54,9 +54,9 @@ def insert_attendance(employee_name, check_type, date, time):
 
 # Calculate total work time
 def calculate_total_work_time(employee_name, date):
-    records = db.collection('attendance')\
-                .where('employee_name', '==', employee_name)\
-                .where('date', '==', date)\
+    records = db.collection('attendance') \
+                .where('employee_name', '==', employee_name) \
+                .where('date', '==', date) \
                 .stream()
 
     total_seconds = 0
@@ -71,9 +71,10 @@ def calculate_total_work_time(employee_name, date):
         elif data['check_type'] == 'Check Out' and check_in_time:
             time_diff = time_obj - check_in_time
             total_seconds += time_diff.total_seconds()
-            check_in_time = None  # Reset check-in time after using it
+            check_in_time = None
 
-    return str(timedelta(seconds=total_seconds))
+    return str(timedelta(seconds=total_seconds)) if total_seconds > 0 else "0:00:00"
+
 
 # Update work times in Firestore
 def update_work_times(employee_name, date):
@@ -191,22 +192,24 @@ if st.session_state.get('authenticated'):
             st.session_state.barcode = ""
 
     elif page == "View Total Hours Worked":
-        st.title("Total Hours Worked")
-        employee_names = [e['employee_name'] for e in db.collection('employees').stream()]
+    st.title("Total Hours Worked")
+    employee_records = db.collection('employees').get()
+    employee_names = [record.to_dict().get('employee_name') for record in employee_records]
 
-        if len(employee_names) == 0:
-            st.warning("No employees found. Please add an employee to start tracking attendance.")
+    if len(employee_names) == 0:
+        st.warning("No employees found. Please add an employee to start tracking attendance.")
+    else:
+        selected_employee = st.selectbox("Select Employee", employee_names)
+        start_date = st.date_input("Start Date", value=datetime.now() - timedelta(days=30))
+        end_date = st.date_input("End Date", value=datetime.now())
+
+        if start_date > end_date:
+            st.error("Start date must be before or equal to end date.")
         else:
-            selected_employee = st.selectbox("Select Employee", employee_names)
-            start_date = st.date_input("Start Date", value=datetime.now() - timedelta(days=30))
-            end_date = st.date_input("End Date", value=datetime.now())
+            if st.button("Calculate Total Hours"):
+                total_hours = calculate_total_work_time(selected_employee, start_date.strftime("%Y-%m-%d"))
+                st.success(f"Total hours worked by {selected_employee} from {start_date} to {end_date}: {total_hours}")
 
-            if start_date > end_date:
-                st.error("Start date must be before or equal to end date.")
-            else:
-                if st.button("Calculate Total Hours"):
-                    total_hours = calculate_total_work_time(selected_employee, start_date.strftime("%Y-%m-%d"))
-                    st.success(f"Total hours worked by {selected_employee} from {start_date} to {end_date}: {total_hours}")
 
     elif page == "Register New Employee":
         st.title("Register New Employee")
