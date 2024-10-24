@@ -208,9 +208,9 @@ if st.session_state.get('authenticated'):
                     st.success(f"Total hours worked by {selected_employee} from {start_date} to {end_date}: {total_hours}")
 
     elif page == "Register New Employee":
-    st.title("Register New Employee")
-    employee_name = st.text_input("Employee Name")
-    barcode = st.text_input("Barcode")
+        st.title("Register New Employee")
+        employee_name = st.text_input("Employee Name")
+        barcode = st.text_input("Barcode")
 
     if st.button("Register"):
         register_employee(employee_name, barcode)
