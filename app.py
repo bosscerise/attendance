@@ -192,23 +192,23 @@ if st.session_state.get('authenticated'):
             st.session_state.barcode = ""
 
     elif page == "View Total Hours Worked":
-    st.title("Total Hours Worked")
-    employee_records = db.collection('employees').get()
-    employee_names = [record.to_dict().get('employee_name') for record in employee_records]
+        st.title("Total Hours Worked")
+        employee_records = db.collection('employees').get()
+        employee_names = [record.to_dict().get('employee_name') for record in employee_records]
 
-    if len(employee_names) == 0:
-        st.warning("No employees found. Please add an employee to start tracking attendance.")
-    else:
-        selected_employee = st.selectbox("Select Employee", employee_names)
-        start_date = st.date_input("Start Date", value=datetime.now() - timedelta(days=30))
-        end_date = st.date_input("End Date", value=datetime.now())
-
-        if start_date > end_date:
-            st.error("Start date must be before or equal to end date.")
+        if len(employee_names) == 0:
+            st.warning("No employees found. Please add an employee to start tracking attendance.")
         else:
-            if st.button("Calculate Total Hours"):
-                total_hours = calculate_total_work_time(selected_employee, start_date.strftime("%Y-%m-%d"))
-                st.success(f"Total hours worked by {selected_employee} from {start_date} to {end_date}: {total_hours}")
+            selected_employee = st.selectbox("Select Employee", employee_names)
+            start_date = st.date_input("Start Date", value=datetime.now() - timedelta(days=30))
+            end_date = st.date_input("End Date", value=datetime.now())
+
+            if start_date > end_date:
+                st.error("Start date must be before or equal to end date.")
+            else:
+                if st.button("Calculate Total Hours"):
+                    total_hours = calculate_total_work_time(selected_employee, start_date.strftime("%Y-%m-%d"))
+                    st.success(f"Total hours worked by {selected_employee} from {start_date} to {end_date}: {total_hours}")
 
 
     elif page == "Register New Employee":
