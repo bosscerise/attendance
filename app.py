@@ -4,8 +4,10 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime, timedelta
 
+firebase_credentials = st.secrets["FIREBASE_CREDEDNTIALS"]
+
 # Firebase setup
-cred = credentials.Certificate("credentials.json")
+cred = credentials.Certificate(firebase_credentials)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
