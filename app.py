@@ -42,12 +42,11 @@ def authenticate(username, password):
 # Insert attendance to Firestore
 def insert_attendance(employee_name, check_type, date, time):
     try:
-        db.collection('attendance').add({
+        db.collection('attendance').document(date).set({
             'employee_name': employee_name,
             'check_type': check_type,
-            'date': date,
             'time': time
-        })
+        }, firestore.DocumentIdField())
         st.success(f"Attendance for {employee_name} recorded: {check_type} at {time}")
     except Exception as e:
         st.error(f"An error occurred while inserting attendance: {e}")
@@ -81,13 +80,15 @@ def update_work_times(employee_name, date):
     total_work_time = calculate_total_work_time(employee_name, date)
 
     try:
-        db.collection('work_times').document(f"{employee_name}_{date}").set({
+        doc_ref = db.collection('work_times').document(f"{employee_name}_{date}")
+        doc_ref.set({
             'employee_name': employee_name,
             'date': date,
             'total_work_time': total_work_time
         }, merge=True)
     except Exception as e:
         st.error(f"An error occurred while updating work times: {e}")
+
 
 # Register employee in Firestore
 def register_employee(employee_name, barcode):
@@ -100,18 +101,12 @@ def register_employee(employee_name, barcode):
     except Exception as e:
         st.error(f"An error occurred while registering employee: {e}")
 
+
 # Get last check-in from Firestore
 def get_last_check_in(employee_name, date):
-    records = db.collection('attendance')\
-                .where('employee_name', '==', employee_name)\
-                .where('date', '==', date)\
-                .where('check_type', '==', 'Check In')\
-                .order_by('time', direction=firestore.Query.DESCENDING)\
-                .limit(1)\
-                .stream()
-
-    for record in records:
-        return record.to_dict()['time']
+    records = db.collection('attendance').document(date).collection('check_ins').order_by('time', direction=firestore.Query.DESCENDING).limit(1).get()
+    if records:
+        return records[0].to_dict()['time']
     return None
 
 # Process check (Check In/Out)
@@ -121,46 +116,40 @@ def process_check(barcode):
     time = now.strftime("%H:%M:%S")
 
     # Get employee by barcode
-    records = db.collection('employees').where('barcode', '==', barcode).stream()
-    employee_name = None
+    employee_record = db.collection('employees').where('barcode', '==', barcode).get()
+    if employee_record:
+        employee_name = employee_record[0].to_dict()['employee_name']
+    else:
+        st.warning("Employee not found. Please scan again or register a new employee.")
+        return
 
-    for record in records:
-        employee_name = record.to_dict()['employee_name']
+    last_check_in_time = get_last_check_in(employee_name, date)
 
-    if employee_name:
-        last_check_in_time = get_last_check_in(employee_name, date)
-
-        if last_check_in_time is None:
-            check_type = "Check In"
+    if last_check_in_time is None:
+        check_type = "Check In"
+    else:
+        check_outs = db.collection('attendance').document(date).collection('check_outs').where('time', '>', last_check_in_time).get()
+        if check_outs:
+            check_type = "Check Out"
         else:
-            # Check if Check Out exists after last Check In
-            check_outs = db.collection('attendance')\
-                           .where('employee_name', '==', employee_name)\
-                           .where('date', '==', date)\
-                           .where('check_type', '==', 'Check Out')\
-                           .where('time', '>', last_check_in_time)\
-                           .stream()
-            if sum(1 for _ in check_outs) == 0:
-                check_type = "Check Out"
-            else:
-                check_type = "Check In"
+            check_type = "Check In"
 
-        insert_attendance(employee_name, check_type, date, time)
+    insert_attendance(employee_name, check_type, date, time)
 
-        if check_type == "Check In":
-            st.success(f"{employee_name} checked in at {time}")
-        elif check_type == "Check Out":
-            st.success(f"{employee_name} checked out at {time}")
-            total_work_time = calculate_total_work_time(employee_name, date)
-            update_work_times(employee_name, date)
+    if check_type == "Check In":
+        st.success(f"{employee_name} checked in at {time}")
+    elif check_type == "Check Out":
+        st.success(f"{employee_name} checked out at {time}")
+        total_work_time = calculate_total_work_time(employee_name, date)
+        update_work_times(employee_name, date)
 
-            daily_summary = f"""
-            <h3>Daily Summary</h3>
-            <p>Employee: {employee_name}</p>
-            <p>Date: {date}</p>
-            <p>Total Work Time: {total_work_time}</p>
-            """
-            st.markdown(daily_summary, unsafe_allow_html=True)
+        daily_summary = f"""
+        <h3>Daily Summary</h3>
+        <p>Employee: {employee_name}</p>
+        <p>Date: {date}</p>
+        <p>Total Work Time: {total_work_time}</p>
+        """
+        st.markdown(daily_summary, unsafe_allow_html=True)
     else:
         st.warning("Employee not found. Please scan again or register a new employee.")
 
