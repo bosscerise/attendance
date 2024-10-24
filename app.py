@@ -14,8 +14,7 @@ firebase_credentials = {
     "auth_uri": st.secrets["FIREBASE_CREDENTIALS"]["auth_uri"],
     "token_uri": st.secrets["FIREBASE_CREDENTIALS"]["token_uri"],
     "auth_provider_x509_cert_url": st.secrets["FIREBASE_CREDENTIALS"]["auth_provider_x509_cert_url"],
-    "client_x509_cert_url": st.secrets["FIREBASE_CREDENTIALS"]["client_x509_cert_url"],
-    "universe_domain": st.secrets["FIREBASE_CREDENTIALS"]["universe_domain"]
+    "client_x509_cert_url": st.secrets["FIREBASE_CREDENTIALS"]["client_x509_cert_url"]
 }
 
 # Firebase setup
