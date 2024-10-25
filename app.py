@@ -29,18 +29,14 @@ def init_firebase():
 
 db = init_firebase()
 
-# Hardcoded authentication (simple approach)
-USERNAME = "admin"
-PASSWORD = "password"
-
 # Authentication check
 def authenticate(username, password):
-    return username == USERNAME and password == PASSWORD
+    return username == "admin" and password == "password"
 
-# Insert attendance to Firestore (with unique ID per check event)
+# Insert attendance to Firestore
 def insert_attendance(employee_name, check_type, date, time):
     try:
-        doc_id = f"{employee_name}_{date}_{check_type}_{time}"  # Unique ID using name, date, type, time
+        doc_id = f"{employee_name}_{date}_{check_type}_{time}"
         db.collection('attendance').document(doc_id).set({
             'employee_name': employee_name,
             'check_type': check_type,
@@ -51,12 +47,12 @@ def insert_attendance(employee_name, check_type, date, time):
     except Exception as e:
         st.error(f"An error occurred while inserting attendance: {e}")
 
-# Get last check event (Check In/Out) from Firestore for specific employee and date
+# Get last check event for an employee on a given date
 def get_last_check(employee_name, date, check_type):
     records = db.collection('attendance') \
-                .where(filter=('employee_name', '==', employee_name)) \
-                .where(filter=('date', '==', date)) \
-                .where(filter=('check_type', '==', check_type)) \
+                .where('employee_name', '==', employee_name) \
+                .where('date', '==', date) \
+                .where('check_type', '==', check_type) \
                 .order_by('time', direction=firestore.Query.DESCENDING) \
                 .limit(1) \
                 .stream()
@@ -131,7 +127,6 @@ def register_employee(employee_name, barcode):
 st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to", ["Login", "Check In/Out", "View Total Hours Worked", "Register New Employee"])
 
-# Authentication
 if page == "Login":
     st.title("Login")
     username = st.text_input("Username")
@@ -144,12 +139,10 @@ if page == "Login":
         else:
             st.error("Invalid username or password")
 
-# If authenticated, show main app
 if st.session_state.get('authenticated'):
     if page == "Check In/Out":
         st.title("Employee Attendance System with Barcode Scanner")
         barcode = st.text_input("Scan Barcode")
-
         if st.button("Submit") and barcode:
             process_check(barcode)
             st.session_state.barcode = ""
@@ -177,7 +170,6 @@ if st.session_state.get('authenticated'):
         st.title("Register New Employee")
         employee_name = st.text_input("Employee Name")
         barcode = st.text_input("Barcode")
-
         if st.button("Register"):
             register_employee(employee_name, barcode)
 else:
