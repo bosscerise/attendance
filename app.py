@@ -87,6 +87,7 @@ def process_check(barcode):
         update_work_times(employee_name, date)
 
 # Calculate work time with a check-in/out pair
+
 def calculate_total_work_time(employee_name, date):
     check_ins = db.collection('attendance').where('employee_name', '==', employee_name).where('date', '==', date).where('check_type', '==', 'Check In').stream()
     check_outs = db.collection('attendance').where('employee_name', '==', employee_name).where('date', '==', date).where('check_type', '==', 'Check Out').stream()
@@ -97,7 +98,13 @@ def calculate_total_work_time(employee_name, date):
         check_out_time = datetime.strptime(check_out.to_dict()['time'], "%H:%M:%S")
         total_seconds += (check_out_time - check_in_time).total_seconds()
 
-    return str(timedelta(seconds=total_seconds)) if total_seconds > 0 else "0:00:00"
+    if total_seconds <= 0:
+        return "0:00:00"
+    else:
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{int(hours):02d}:{int(minutes):02d}:{seconds:05.2f}"
+
 
 # Update work times in Firestore
 def update_work_times(employee_name, date):
@@ -147,7 +154,7 @@ if st.session_state.get('authenticated'):
             process_check(barcode)
             st.session_state.barcode = ""
 
-    elif page == "View Total Hours Worked":
+   elif page == "View Total Hours Worked":
         st.title("Total Hours Worked")
         employee_records = db.collection('employees').get()
         employee_names = [record.to_dict().get('employee_name') for record in employee_records]
@@ -164,8 +171,7 @@ if st.session_state.get('authenticated'):
             else:
                 if st.button("Calculate Total Hours"):
                     total_hours = calculate_total_work_time(selected_employee, start_date.strftime("%Y-%m-%d"))
-                    st.success(f"Total hours worked by {selected_employee} from {start_date} to {end_date}: {total_hours}")
-
+                    st.success(f"Total hours worked by {selected_employee} from {start_date} to {end_date}: {total_hours}") 
     elif page == "Register New Employee":
         st.title("Register New Employee")
         employee_name = st.text_input("Employee Name")
