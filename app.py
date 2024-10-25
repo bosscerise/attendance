@@ -78,7 +78,7 @@ def process_check(barcode):
         check_type = "Check In"
     else:
         last_check_out = get_last_check(employee_name, date, "Check Out")
-        check_type = "Check Out" if last_check_out is None or last_check_out['time'] < last_check_in['time'] else "Check In"
+        check_type = "Check Out" if last_check_out is None or last_check_out.to_dict()['time'] < last_check_in.to_dict()['time'] else "Check In"
 
     # Insert attendance and update work time if checking out
     insert_attendance(employee_name, check_type, date, time)
