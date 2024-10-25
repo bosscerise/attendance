@@ -87,7 +87,6 @@ def process_check(barcode):
         update_work_times(employee_name, date)
 
 # Calculate work time with a check-in/out pair
-
 def calculate_total_work_time(employee_name, date):
     check_ins = db.collection('attendance').where('employee_name', '==', employee_name).where('date', '==', date).where('check_type', '==', 'Check In').stream()
     check_outs = db.collection('attendance').where('employee_name', '==', employee_name).where('date', '==', date).where('check_type', '==', 'Check Out').stream()
@@ -103,8 +102,8 @@ def calculate_total_work_time(employee_name, date):
     else:
         hours, remainder = divmod(total_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
-        return f"{int(hours):02d}:{int(minutes):02d}:{seconds:05.2f}"
-
+        # Format the output string
+        return f"{hours:02d}:{minutes:02d}:{seconds:05.2f}"
 
 # Update work times in Firestore
 def update_work_times(employee_name, date):
