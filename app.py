@@ -33,6 +33,7 @@ db = init_firebase()
 USERNAME = "admin"
 PASSWORD = "password"
 
+# Authentication check
 def authenticate(username, password):
     return username == USERNAME and password == PASSWORD
 
@@ -50,26 +51,44 @@ def insert_attendance(employee_name, check_type, date, time):
     except Exception as e:
         st.error(f"An error occurred while inserting attendance: {e}")
 
+# Get last check event (Check In/Out) from Firestore for specific employee and date
+def get_last_check(employee_name, date, check_type):
+    records = db.collection('attendance') \
+                .where(filter=('employee_name', '==', employee_name)) \
+                .where(filter=('date', '==', date)) \
+                .where(filter=('check_type', '==', check_type)) \
+                .order_by('time', direction=firestore.Query.DESCENDING) \
+                .limit(1) \
+                .stream()
+    return next(records, None)
 
-# Calculate total work time
-def calculate_total_work_time(employee_name, date):
-    records = db.collection('attendance').document(date).collection(employee_name).get()
-    
-    total_seconds = 0
-    check_in_time = None
+# Process check-in/out event
+def process_check(barcode):
+    now = datetime.now()
+    date = now.strftime("%Y-%m-%d")
+    time = now.strftime("%H:%M:%S")
 
-    for record in records:
-        data = record.to_dict()
-        time_obj = datetime.strptime(data['time'], "%H:%M:%S")
-        
-        if data['check_type'] == 'Check In':
-            check_in_time = time_obj
-        elif data['check_type'] == 'Check Out' and check_in_time:
-            time_diff = time_obj - check_in_time
-            total_seconds += time_diff.total_seconds()
-            check_in_time = None
+    # Find employee by barcode
+    employee_record = db.collection('employees').where('barcode', '==', barcode).get()
+    if employee_record:
+        employee_name = employee_record[0].to_dict()['employee_name']
+    else:
+        st.warning("Employee not found. Please scan again or register a new employee.")
+        return
 
-    return str(timedelta(seconds=total_seconds)) if total_seconds > 0 else "0:00:00"
+    # Determine check type
+    last_check_in = get_last_check(employee_name, date, "Check In")
+    if last_check_in is None:
+        check_type = "Check In"
+    else:
+        last_check_out = get_last_check(employee_name, date, "Check Out")
+        check_type = "Check Out" if last_check_out is None or last_check_out['time'] < last_check_in['time'] else "Check In"
+
+    # Insert attendance and update work time if checking out
+    insert_attendance(employee_name, check_type, date, time)
+    if check_type == "Check Out":
+        total_work_time = calculate_total_work_time(employee_name, date)
+        update_work_times(employee_name, date)
 
 # Calculate work time with a check-in/out pair
 def calculate_total_work_time(employee_name, date):
@@ -84,6 +103,19 @@ def calculate_total_work_time(employee_name, date):
 
     return str(timedelta(seconds=total_seconds)) if total_seconds > 0 else "0:00:00"
 
+# Update work times in Firestore
+def update_work_times(employee_name, date):
+    total_work_time = calculate_total_work_time(employee_name, date)
+    try:
+        doc_ref = db.collection('work_times').document(f"{employee_name}_{date}")
+        doc_ref.set({
+            'employee_name': employee_name,
+            'date': date,
+            'total_work_time': total_work_time
+        }, merge=True)
+    except Exception as e:
+        st.error(f"An error occurred while updating work times: {e}")
+
 # Register employee in Firestore
 def register_employee(employee_name, barcode):
     try:
@@ -94,58 +126,6 @@ def register_employee(employee_name, barcode):
         st.success(f"Employee '{employee_name}' registered successfully!")
     except Exception as e:
         st.error(f"An error occurred while registering employee: {e}")
-
-# Get last check event (Check In/Out) from Firestore for specific employee and date
-def get_last_check(employee_name, date, check_type):
-    records = db.collection('attendance') \
-                .where('employee_name', '==', employee_name) \
-                .where('date', '==', date) \
-                .where('check_type', '==', check_type) \
-                .order_by('time', direction=firestore.Query.DESCENDING) \
-                .limit(1) \
-                .stream()
-    return next(records, None)
-
-# Process check (Check In/Out)
-def process_check(barcode):
-    now = datetime.now()
-    date = now.strftime("%Y-%m-%d")
-    time = now.strftime("%H:%M:%S")
-
-    employee_record = db.collection('employees').where('barcode', '==', barcode).get()
-    if employee_record:
-        employee_name = employee_record[0].to_dict()['employee_name']
-    else:
-        st.warning("Employee not found. Please scan again or register a new employee.")
-        return
-
-    last_check_in_time = get_last_check_in(employee_name, date)
-
-    if last_check_in_time is None:
-        check_type = "Check In"
-    else:
-        check_outs = db.collection('attendance').document(date).collection(employee_name).where('check_type', '==', 'Check Out').get()
-        if check_outs:
-            check_type = "Check In"
-        else:
-            check_type = "Check Out"
-
-    insert_attendance(employee_name, check_type, date, time)
-
-    if check_type == "Check In":
-        st.success(f"{employee_name} checked in at {time}")
-    elif check_type == "Check Out":
-        st.success(f"{employee_name} checked out at {time}")
-        total_work_time = calculate_total_work_time(employee_name, date)
-        update_work_times(employee_name, date)
-
-        daily_summary = f"""
-        <h3>Daily Summary</h3>
-        <p>Employee: {employee_name}</p>
-        <p>Date: {date}</p>
-        <p>Total Work Time: {total_work_time}</p>
-        """
-        st.markdown(daily_summary, unsafe_allow_html=True)
 
 # Streamlit app layout
 st.sidebar.title("Navigation")
@@ -164,6 +144,7 @@ if page == "Login":
         else:
             st.error("Invalid username or password")
 
+# If authenticated, show main app
 if st.session_state.get('authenticated'):
     if page == "Check In/Out":
         st.title("Employee Attendance System with Barcode Scanner")
@@ -178,7 +159,7 @@ if st.session_state.get('authenticated'):
         employee_records = db.collection('employees').get()
         employee_names = [record.to_dict().get('employee_name') for record in employee_records]
 
-        if not employee_names:
+        if len(employee_names) == 0:
             st.warning("No employees found. Please add an employee to start tracking attendance.")
         else:
             selected_employee = st.selectbox("Select Employee", employee_names)
