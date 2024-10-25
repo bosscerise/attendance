@@ -90,6 +90,7 @@ def get_last_check(employee_name, date, check_type):
     records = db.collection('attendance').where('employee_name', '==', employee_name).where('date', '==', date).where('check_type', '==', check_type).order_by('time', direction=firestore.Query.DESCENDING).limit(1).stream()
     return next(records, None)
 
+
 def calculate_total_work_time(employee_name, date):
     check_ins = db.collection('attendance').where('employee_name', '==', employee_name).where('date', '==', date).where('check_type', '==', 'Check In').stream()
     check_outs = db.collection('attendance').where('employee_name', '==', employee_name).where('date', '==', date).where('check_type', '==', 'Check Out').stream()
@@ -105,8 +106,9 @@ def calculate_total_work_time(employee_name, date):
     else:
         hours, remainder = divmod(total_seconds, 3600)
         minutes, seconds = divmod(remainder, 60)
+        
         # Format the output string
-        return f"{hours:02d}:{minutes:02d}:{seconds:05.2f}"
+        return f"{int(hours):02d}:{int(minutes):02d}:{seconds:06.2f}"
 
 def update_work_times(employee_name, date):
     total_work_time = calculate_total_work_time(employee_name, date)
@@ -115,11 +117,10 @@ def update_work_times(employee_name, date):
         doc_ref.set({
             'employee_name': employee_name,
             'date': date,
-            'total_work_time': str(total_work_time)  # Convert to string
+            'total_work_time': total_work_time
         }, merge=True)
     except Exception as e:
         st.error(f"An error occurred while updating work times: {e}")
-
 
 # Register employee in Firestore
 def register_employee(employee_name, barcode):
