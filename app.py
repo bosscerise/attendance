@@ -108,7 +108,9 @@ def calculate_total_work_time(employee_name, date):
         minutes, seconds = divmod(remainder, 60)
         
         # Format the output string
-        return f"{int(hours):02d}:{int(minutes):02d}:{seconds:06.2f}"
+        formatted_seconds = f"{seconds:.2f}"
+        return f"{int(hours):02d}:{int(minutes):02d}:{formatted_seconds.zfill(2)}"
+
 
 def update_work_times(employee_name, date):
     total_work_time = calculate_total_work_time(employee_name, date)
@@ -117,10 +119,11 @@ def update_work_times(employee_name, date):
         doc_ref.set({
             'employee_name': employee_name,
             'date': date,
-            'total_work_time': total_work_time
+            'total_work_time': str(total_work_time)  # Convert to string
         }, merge=True)
     except Exception as e:
         st.error(f"An error occurred while updating work times: {e}")
+
 
 # Register employee in Firestore
 def register_employee(employee_name, barcode):
@@ -157,7 +160,7 @@ if st.session_state.get('authenticated'):
             process_check(barcode)
             st.session_state.barcode = ""
 
-    elif page == "View Total Hours Worked":
+        elif page == "View Total Hours Worked":
         st.title("Total Hours Worked")
         employee_records = db.collection('employees').get()
         employee_names = [record.to_dict().get('employee_name') for record in employee_records]
