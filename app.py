@@ -159,8 +159,8 @@ if st.session_state.get('authenticated'):
         if st.button("Submit") and barcode:
             process_check(barcode)
             st.session_state.barcode = ""
-
-        elif page == "View Total Hours Worked":
+    
+    elif page == "View Total Hours Worked":
         st.title("Total Hours Worked")
         employee_records = db.collection('employees').get()
         employee_names = [record.to_dict().get('employee_name') for record in employee_records]
