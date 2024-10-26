@@ -4,11 +4,11 @@ import firebase_admin
 from firebase_admin import credentials, firestore, initialize_app
 from google.cloud.firestore_v1.base_query import FieldFilter
 import time
+import pytz
 
 # Firebase initialization
 def init_firebase():
     if not firebase_admin._apps:
-        # Retrieve credentials from Streamlit secrets
         firebase_cred = credentials.Certificate({
             "type": st.secrets["FIREBASE_CREDENTIALS"]["type"],
             "project_id": st.secrets["FIREBASE_CREDENTIALS"]["project_id"],
@@ -27,14 +27,12 @@ def init_firebase():
 # Initialize the Firestore database
 db = init_firebase()
 
-
 # Authentication
 def authenticate(username, password):
     return username == st.secrets["ADMIN_USERNAME"] and password == st.secrets["ADMIN_PASSWORD"]
 
-# Hi
 def authenticatend(spusername, sppassword):
-    return spusername == st.secrets["SUPER_USERNAME"] and sppassword == st.secrets["SUPER_PASSWORD"] 
+    return spusername == st.secrets["SUPER_USERNAME"] and sppassword == st.secrets["SUPER_PASSWORD"]
 
 # Firestore operations
 def insert_attendance(employee_name, check_type, date, time):
@@ -102,7 +100,7 @@ def update_work_times(employee_name, date):
         doc_ref.set({
             'employee_name': employee_name,
             'date': date,
-'total_work_time': total_work_time
+            'total_work_time': total_work_time
         }, merge=True)
     except Exception as e:
         st.error(f"An error occurred while updating work times: {e}")
@@ -122,11 +120,41 @@ def register_employee(employee_name, barcode):
     except Exception as e:
         st.error(f"An error occurred while registering employee: {e}")
 
+# New functions for additional pages
+def get_current_attendance():
+    now = datetime.now()
+    date = now.strftime("%Y-%m-%d")
+    
+    all_employees = db.collection('employees').stream()
+    current_status = {}
+
+    for employee in all_employees:
+        employee_name = employee.to_dict()['employee_name']
+        last_check_in = get_last_check(employee_name, date, "Check In")
+        last_check_out = get_last_check(employee_name, date, "Check Out")
+
+        if last_check_in and (not last_check_out or last_check_in.to_dict()['time'] > last_check_out.to_dict()['time']):
+            current_status[employee_name] = "Checked In"
+        else:
+            current_status[employee_name] = "Checked Out"
+
+    return current_status
+
+def get_employee_timeline(employee_name, date):
+    timeline = []
+    checks = db.collection('attendance').where(filter=FieldFilter('employee_name', '==', employee_name)).where(filter=FieldFilter('date', '==', date)).order_by('time').stream()
+
+    for check in checks:
+        check_data = check.to_dict()
+        timeline.append((check_data['time'], check_data['check_type']))
+
+    return timeline
+
 # Streamlit UI
 st.set_page_config(page_title="Employee Attendance System", layout="wide")
 
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Login", "Check In/Out", "View Total Hours Worked", "Register New Employee"])
+page = st.sidebar.radio("Go to", ["Login", "Check In/Out", "View Total Hours Worked", "Register New Employee", "Current Attendance", "Employee Timeline"])
 
 if page == "Login":
     st.title("Login")
@@ -148,16 +176,53 @@ if page == "Login":
 if st.session_state.get('authenticated') or st.session_state.get('authenticatend'):
     if page == "Check In/Out":
         st.title("Employee Attendance System")
-
-        # Placeholder for text input field to reset after submission
         barcode = st.text_input("Scan Barcode", key="barcode_input")
-
         if st.button("Submit") and barcode:
             process_check(barcode)
-            # Re-render the barcode input field to clear it
-            time.sleep(10)
+            time.sleep(2)
             st.rerun()
 
+    elif page == "Current Attendance":
+        st.title("Current Attendance Status")
+        current_status = get_current_attendance()
+        
+        st.write("Last updated:", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.subheader("Checked In")
+            for employee, status in current_status.items():
+                if status == "Checked In":
+                    st.write(employee)
+        
+        with col2:
+            st.subheader("Checked Out")
+            for employee, status in current_status.items():
+                if status == "Checked Out":
+                    st.write(employee)
+        
+        if st.button("Refresh"):
+            st.rerun()
+
+    elif page == "Employee Timeline":
+        st.title("Employee Daily Timeline")
+        
+        employee_records = db.collection('employees').get()
+        employee_names = [record.to_dict().get('employee_name') for record in employee_records]
+        
+        selected_employee = st.selectbox("Select Employee", employee_names)
+        selected_date = st.date_input("Select Date", value=datetime.now())
+        
+        if st.button("Show Timeline"):
+            timeline = get_employee_timeline(selected_employee, selected_date.strftime("%Y-%m-%d"))
+            
+            if timeline:
+                st.subheader(f"Timeline for {selected_employee} on {selected_date}")
+                for time, check_type in timeline:
+                    st.write(f"{time} - {check_type}")
+            else:
+                st.info("No records found for the selected date.")
 
 if st.session_state.get('authenticatend'):
     if page == "View Total Hours Worked":
@@ -190,4 +255,3 @@ if st.session_state.get('authenticatend'):
 
             if submit_button and employee_name and barcode:
                 register_employee(employee_name, barcode)
-
