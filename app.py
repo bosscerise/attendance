@@ -16,7 +16,7 @@ db = init_firebase()
 
 # Authentication
 def authenticate(username, password):
-    return username == st.secrets["ADMIN_USERNAME"] and password == st.secrets["ADMIN_PASSWORD"]
+    return username == st.secrets["secrets"]["ADMIN_USERNAME"] and password == st.secrets["secrets"]["ADMIN_PASSWORD"]
 
 # Firestore operations
 def insert_attendance(employee_name, check_type, date, time):
