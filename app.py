@@ -32,6 +32,10 @@ db = init_firebase()
 def authenticate(username, password):
     return username == st.secrets["ADMIN_USERNAME"] and password == st.secrets["ADMIN_PASSWORD"]
 
+# Hi
+def authenticatend(spusername, sppassword):
+    return spusername == st.secrets["SUPER_USERNAME"] and sppassword == st.secrets["SUPER_PASSWORD"] 
+
 # Firestore operations
 def insert_attendance(employee_name, check_type, date, time):
     try:
@@ -135,6 +139,9 @@ if page == "Login":
             if authenticate(username, password):
                 st.session_state['authenticated'] = True
                 st.success("Logged in successfully!")
+            elif authenticatend(username, password):
+                st.session_state['authenticatend'] = True
+                st.success("Hi bachir ou kader :3 !")
             else:
                 st.error("Invalid username or password")
 
@@ -151,8 +158,11 @@ if st.session_state.get('authenticated'):
             time.sleep(10)
             st.rerun()
 
+    else:
+        st.warning("Please log in to access these faetures..")
 
-    elif page == "View Total Hours Worked":
+if st.session_state.get('authenticatend'):
+    if page == "View Total Hours Worked":
         st.title("Total Hours Worked")
         employee_records = db.collection('employees').get()
         employee_names = [record.to_dict().get('employee_name') for record in employee_records]
