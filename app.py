@@ -146,13 +146,14 @@ def get_employee_timeline(employee_name, date):
               .where(filter=FieldFilter('employee_name', '==', employee_name))
               .where(filter=FieldFilter('date', '==', date))
               .order_by('time', direction=firestore.Query.DESCENDING)
-              .order_by(firestore.field_path.FieldPath.document_id(), direction=firestore.Query.DESCENDING)
               .order_by('check_type', direction=firestore.Query.ASCENDING)
               .stream())
 
     for check in checks:
         check_data = check.to_dict()
         timeline.append((check_data['time'], check_data['check_type']))
+
+    return timeline
 
 # Streamlit UI
 st.set_page_config(page_title="Employee Attendance System", layout="wide")
