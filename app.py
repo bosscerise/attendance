@@ -126,10 +126,15 @@ if page == "Login":
 if st.session_state.get('authenticated'):
     if page == "Check In/Out":
         st.title("Employee Attendance System")
+
+        # Placeholder for text input field to reset after submission
         barcode = st.text_input("Scan Barcode", key="barcode_input")
+
         if st.button("Submit") and barcode:
             process_check(barcode)
-            st.session_state.barcode_input = ""  # Clear the input field
+            # Re-render the barcode input field to clear it
+            st.experimental_rerun()
+
 
     elif page == "View Total Hours Worked":
         st.title("Total Hours Worked")
