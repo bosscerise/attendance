@@ -14,14 +14,9 @@ def init_firebase():
 
 db = init_firebase()
 
-
+# Authentication
 def authenticate(username, password):
-    try:
-        return username == st.secrets.get("ADMIN_USERNAME") and password == st.secrets.get("ADMIN_PASSWORD")
-    except KeyError:
-        st.error("Authentication failed. Please check your credentials.")
-        return False
-
+    return username == st.secrets["ADMIN_USERNAME"] and password == st.secrets["ADMIN_PASSWORD"]
 
 # Firestore operations
 def insert_attendance(employee_name, check_type, date, time):
