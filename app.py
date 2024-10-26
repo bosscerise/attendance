@@ -142,7 +142,12 @@ def get_current_attendance():
 
 def get_employee_timeline(employee_name, date):
     timeline = []
-    checks = db.collection('attendance').where(filter=FieldFilter('employee_name', '==', employee_name)).where(filter=FieldFilter('date', '==', date)).order_by('time', direction=firestore.Query.DESCENDING).stream()
+    checks = (db.collection('attendance')
+              .where(filter=FieldFilter('employee_name', '==', employee_name))
+              .where(filter=FieldFilter('date', '==', date))
+              .order_by('time', direction=firestore.Query.ASCENDING)
+              .order_by(firestore.field_path.FieldPath.document_id(), direction=firestore.Query.ASCENDING)
+              .stream())
 
     for check in checks:
         check_data = check.to_dict()
