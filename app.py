@@ -145,15 +145,14 @@ def get_employee_timeline(employee_name, date):
     checks = (db.collection('attendance')
               .where(filter=FieldFilter('employee_name', '==', employee_name))
               .where(filter=FieldFilter('date', '==', date))
-              .order_by('time', direction=firestore.Query.ASCENDING)
-              .order_by(firestore.field_path.FieldPath.document_id(), direction=firestore.Query.ASCENDING)
+              .order_by('time', direction=firestore.Query.DESCENDING)
+              .order_by(firestore.field_path.FieldPath.document_id(), direction=firestore.Query.DESCENDING)
+              .order_by('check_type', direction=firestore.Query.ASCENDING)
               .stream())
 
     for check in checks:
         check_data = check.to_dict()
         timeline.append((check_data['time'], check_data['check_type']))
-
-    return timeline
 
 # Streamlit UI
 st.set_page_config(page_title="Employee Attendance System", layout="wide")
@@ -210,24 +209,6 @@ if st.session_state.get('authenticated') or st.session_state.get('authenticatend
         if st.button("Refresh"):
             st.rerun()
 
-    elif page == "Employee Timeline":
-        st.title("Employee Daily Timeline")
-        
-        employee_records = db.collection('employees').get()
-        employee_names = [record.to_dict().get('employee_name') for record in employee_records]
-        
-        selected_employee = st.selectbox("Select Employee", employee_names)
-        selected_date = st.date_input("Select Date", value=datetime.now())
-        
-        if st.button("Show Timeline"):
-            timeline = get_employee_timeline(selected_employee, selected_date.strftime("%Y-%m-%d"))
-            
-            if timeline:
-                st.subheader(f"Timeline for {selected_employee} on {selected_date}")
-                for time, check_type in timeline:
-                    st.write(f"{time} - {check_type}")
-            else:
-                st.info("No records found for the selected date.")
 
 if st.session_state.get('authenticatend'):
     if page == "View Total Hours Worked":
@@ -250,6 +231,58 @@ if st.session_state.get('authenticatend'):
             elif st.button("Calculate Total Hours"):
                 total_hours = calculate_total_work_time(selected_employee, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
                 st.success(f"Total hours worked by {selected_employee} from {start_date} to {end_date}: {total_hours}")
+
+
+    elif page == "Employee Timeline":
+        st.title("Employee Timeline")
+
+        # Get list of employees
+        employees = [doc.to_dict()['employee_name'] for doc in db.collection('employees').stream()]
+
+        # Employee selection
+        selected_employee = st.selectbox("Select Employee", employees)
+
+        # Date selection
+        selected_date = st.date_input("Select Date", value=datetime.now())
+
+        if st.button("Show Timeline"):
+            # Convert date to string format
+            date_str = selected_date.strftime("%Y-%m-%d")
+
+            # Get timeline data
+            timeline = get_employee_timeline(selected_employee, date_str)
+
+            if timeline:
+                st.subheader(f"Timeline for {selected_employee} on {selected_date}")
+            
+                # Create two columns for Check In and Check Out
+                col1, col2 = st.columns(2)
+            
+                with col1:
+                    st.write("Check In Times:")
+                    for time, check_type in timeline:
+                        if check_type == "Check In":
+                            st.write(f"- {time}")
+            
+                with col2:
+                    st.write("Check Out Times:")
+                    for time, check_type in timeline:
+                        if check_type == "Check Out":
+                            st.write(f"- {time}")
+
+                # Calculate and display total work time
+                check_ins = [datetime.strptime(time, "%H:%M:%S") for time, check_type in timeline if check_type == "Check In"]
+                check_outs = [datetime.strptime(time, "%H:%M:%S") for time, check_type in timeline if check_type == "Check Out"]
+            
+                total_time = timedelta()
+                for cin, cout in zip(check_ins, check_outs):
+                    total_time += cout - cin
+
+                st.subheader("Total Work Time")
+                st.write(f"{total_time.total_seconds() // 3600:02.0f}:{(total_time.total_seconds() % 3600) // 60:02.0f}")
+
+            else:
+                st.info("No records found for the selected date.")
 
     elif page == "Register New Employee":
         st.title("Register New Employee")
