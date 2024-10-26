@@ -178,7 +178,7 @@ if st.session_state.get('authenticated'):
             else:
                 if st.button("Calculate Total Hours"):
                     total_hours = calculate_total_work_time(selected_employee, start_date.strftime("%Y-%m-%d"))
-                    st.success(f"Total hours worked by {selected_employee} from {start_date} to {end_date}: {total_hours}")
+                    st.success(f"Total hours worked by {selected_employee} from {start_date} to {end_date}: {total_hours} + rak mtytk matjich")
 
 
     elif page == "Register New Employee":
