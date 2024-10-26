@@ -171,7 +171,7 @@ if page == "Login":
         if submit_button:
             if authenticate(username, password):
                 st.session_state['authenticated'] = True
-                st.success("Logged in successfully!")
+                st.success("Logged in successfully!, rabi y3awnk")
             elif authenticatend(username, password):
                 st.session_state['authenticatend'] = True
                 st.success("Hi bachir ou kader :3 !")
@@ -184,7 +184,7 @@ if st.session_state.get('authenticated') or st.session_state.get('authenticatend
         barcode = st.text_input("Scan Barcode", key="barcode_input")
         if st.button("Submit") and barcode:
             process_check(barcode)
-            time.sleep(2)
+            time.sleep(5)
             st.rerun()
 
     elif page == "Current Attendance":
