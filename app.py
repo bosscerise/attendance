@@ -192,5 +192,4 @@ if st.session_state.get('authenticatend'):
 
             if submit_button and employee_name and barcode:
                 register_employee(employee_name, barcode)
-else:
-    st.warning("Please log in to access these features.")
+
