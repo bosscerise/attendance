@@ -87,13 +87,13 @@ def process_check(barcode):
         update_work_times(employee_name, date)
 
 def get_last_check(employee_name, date, check_type):
-    records = db.collection('attendance').where('employee_name', '==', employee_name).where('date', '==', date).where('check_type', '==', check_type).order_by('time', direction=firestore.Query.DESCENDING).limit(1).stream()
+    records = db.collection('attendance').where(filter=FieldFilter('employee_name', '==', employee_name)).where(filter=FieldFilter('date', '==', date)).where(filter=FieldFilter('check_type', '==', check_type)).order_by('time', direction=firestore.Query.DESCENDING).limit(1).stream()
     return next(records, None)
 
 
 def calculate_total_work_time(employee_name, date):
-    check_ins = db.collection('attendance').where('employee_name', '==', employee_name).where('date', '==', date).where('check_type', '==', 'Check In').stream()
-    check_outs = db.collection('attendance').where('employee_name', '==', employee_name).where('date', '==', date).where('check_type', '==', 'Check Out').stream()
+    check_ins = db.collection('attendance').where(filter=FieldFilter('employee_name', '==', employee_name)).where(filter=FieldFilter('date', '==', date)).where(filter=FieldFilter('check_type', '==', 'Check In')).stream()
+    check_outs = db.collection('attendance').where(filter=FieldFilter('employee_name', '==', employee_name)).where(filter=FieldFilter('date', '==', date)).where(filter=FieldFilter('check_type', '==', 'Check Out')).stream()
 
     total_seconds = 0
     for check_in, check_out in zip(check_ins, check_outs):
