@@ -145,7 +145,7 @@ if page == "Login":
             else:
                 st.error("Invalid username or password")
 
-if st.session_state.get('authenticated'):
+if st.session_state.get('authenticated') or st.session_state.get('authenticatend'):
     if page == "Check In/Out":
         st.title("Employee Attendance System")
 
