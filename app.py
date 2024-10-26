@@ -251,9 +251,9 @@ if st.session_state.get('authenticatend'):
 #            date_str = selected_date.strftime("%Y-%m-%d")
 #
 #            # Get timeline data
-            timeline = get_employee_timeline(selected_employee, date_str)
-
-            if timeline:
+ #           timeline = get_employee_timeline(selected_employee, date_str)
+#
+#            if timeline:
 #                st.subheader(f"Timeline for {selected_employee} on {selected_date}")
 #            
 #                # Create two columns for Check In and Check Out
