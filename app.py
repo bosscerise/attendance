@@ -15,8 +15,6 @@ def init_firebase():
 db = init_firebase()
 
 
-st.secrets = st.secrets_store.secrets_store
-
 def authenticate(username, password):
     try:
         return username == st.secrets.get("ADMIN_USERNAME") and password == st.secrets.get("ADMIN_PASSWORD")
