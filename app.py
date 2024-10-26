@@ -8,11 +8,25 @@ import time
 # Firebase initialization
 def init_firebase():
     if not firebase_admin._apps:
-        cred = credentials.Certificate(st.secrets["FIREBASE_CREDENTIALS"])
-        initialize_app(cred)
+        # Retrieve credentials from Streamlit secrets
+        firebase_cred = credentials.Certificate({
+            "type": st.secrets["FIREBASE_CREDENTIALS"]["type"],
+            "project_id": st.secrets["FIREBASE_CREDENTIALS"]["project_id"],
+            "private_key_id": st.secrets["FIREBASE_CREDENTIALS"]["private_key_id"],
+            "private_key": st.secrets["FIREBASE_CREDENTIALS"]["private_key"],
+            "client_email": st.secrets["FIREBASE_CREDENTIALS"]["client_email"],
+            "client_id": st.secrets["FIREBASE_CREDENTIALS"]["client_id"],
+            "auth_uri": st.secrets["FIREBASE_CREDENTIALS"]["auth_uri"],
+            "token_uri": st.secrets["FIREBASE_CREDENTIALS"]["token_uri"],
+            "auth_provider_x509_cert_url": st.secrets["FIREBASE_CREDENTIALS"]["auth_provider_x509_cert_url"],
+            "client_x509_cert_url": st.secrets["FIREBASE_CREDENTIALS"]["client_x509_cert_url"],
+        })
+        firebase_admin.initialize_app(firebase_cred)
     return firestore.client()
 
+# Initialize the Firestore database
 db = init_firebase()
+
 
 # Authentication
 def authenticate(username, password):
