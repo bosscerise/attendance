@@ -3,6 +3,7 @@ from st_login_form import login_form
 from datetime import datetime, timedelta
 import firebase_admin
 from firebase_admin import credentials, firestore, initialize_app
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 # Firebase credentials
 firebase_credentials = {
