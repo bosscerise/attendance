@@ -159,7 +159,7 @@ def get_employee_timeline(employee_name, date):
 st.set_page_config(page_title="Employee Attendance System", layout="wide")
 
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Login", "Check In/Out", "View Total Hours Worked", "Register New Employee", "Current Attendance", "Employee Timeline"])
+page = st.sidebar.radio("Go to", ["Login", "Check In/Out", "View Total Hours Worked", "Register New Employee", "Current Attendance"])
 
 if page == "Login":
     st.title("Login")
@@ -234,56 +234,56 @@ if st.session_state.get('authenticatend'):
                 st.success(f"Total hours worked by {selected_employee} from {start_date} to {end_date}: {total_hours}")
 
 
-    elif page == "Employee Timeline":
-        st.title("Employee Timeline")
-
-        # Get list of employees
-        employees = [doc.to_dict()['employee_name'] for doc in db.collection('employees').stream()]
-
+#    elif page == "Employee Timeline":
+#        st.title("Employee Timeline")
+#
+#        # Get list of employees
+#        employees = [doc.to_dict()['employee_name'] for doc in db.collection('employees').stream()]
+#
         # Employee selection
-        selected_employee = st.selectbox("Select Employee", employees)
-
+#        selected_employee = st.selectbox("Select Employee", employees)
+#
         # Date selection
-        selected_date = st.date_input("Select Date", value=datetime.now())
-
-        if st.button("Show Timeline"):
-            # Convert date to string format
-            date_str = selected_date.strftime("%Y-%m-%d")
-
-            # Get timeline data
+#        selected_date = st.date_input("Select Date", value=datetime.now())
+#
+#        if st.button("Show Timeline"):
+#            # Convert date to string format
+#            date_str = selected_date.strftime("%Y-%m-%d")
+#
+#            # Get timeline data
             timeline = get_employee_timeline(selected_employee, date_str)
 
             if timeline:
-                st.subheader(f"Timeline for {selected_employee} on {selected_date}")
-            
-                # Create two columns for Check In and Check Out
-                col1, col2 = st.columns(2)
-            
-                with col1:
-                    st.write("Check In Times:")
-                    for time, check_type in timeline:
-                        if check_type == "Check In":
-                            st.write(f"- {time}")
-            
-                with col2:
-                    st.write("Check Out Times:")
-                    for time, check_type in timeline:
-                        if check_type == "Check Out":
-                            st.write(f"- {time}")
-
-                # Calculate and display total work time
-                check_ins = [datetime.strptime(time, "%H:%M:%S") for time, check_type in timeline if check_type == "Check In"]
-                check_outs = [datetime.strptime(time, "%H:%M:%S") for time, check_type in timeline if check_type == "Check Out"]
-            
-                total_time = timedelta()
-                for cin, cout in zip(check_ins, check_outs):
-                    total_time += cout - cin
-
-                st.subheader("Total Work Time")
-                st.write(f"{total_time.total_seconds() // 3600:02.0f}:{(total_time.total_seconds() % 3600) // 60:02.0f}")
-
-            else:
-                st.info("No records found for the selected date.")
+#                st.subheader(f"Timeline for {selected_employee} on {selected_date}")
+#            
+#                # Create two columns for Check In and Check Out
+#                col1, col2 = st.columns(2)
+#            
+#                with col1:
+#                    st.write("Check In Times:")
+#                    for time, check_type in timeline:
+#                        if check_type == "Check In":
+#                            st.write(f"- {time}")
+#            
+#                with col2:
+#                    st.write("Check Out Times:")
+#                    for time, check_type in timeline:
+#                        if check_type == "Check Out":
+#                            st.write(f"- {time}")
+#
+#                # Calculate and display total work time
+#                check_ins = [datetime.strptime(time, "%H:%M:%S") for time, check_type in timeline if check_type == "Check In"]
+#                check_outs = [datetime.strptime(time, "%H:%M:%S") for time, check_type in timeline if check_type == "Check Out"]
+#            
+#                total_time = timedelta()
+#                for cin, cout in zip(check_ins, check_outs):
+#                    total_time += cout - cin
+#
+#                st.subheader("Total Work Time")
+#                st.write(f"{total_time.total_seconds() // 3600:02.0f}:{(total_time.total_seconds() % 3600) // 60:02.0f}")
+#
+#            else:
+#                st.info("No records found for the selected date.")
 
     elif page == "Register New Employee":
         st.title("Register New Employee")
