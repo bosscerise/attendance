@@ -158,8 +158,6 @@ if st.session_state.get('authenticated') or st.session_state.get('authenticatend
             time.sleep(10)
             st.rerun()
 
-    else:
-        st.warning("Please log in to access these faetures..")
 
 if st.session_state.get('authenticatend'):
     if page == "View Total Hours Worked":
