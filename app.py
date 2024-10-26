@@ -133,7 +133,7 @@ if st.session_state.get('authenticated'):
         if st.button("Submit") and barcode:
             process_check(barcode)
             # Re-render the barcode input field to clear it
-            st.experimental_rerun()
+            st.rerun()
 
 
     elif page == "View Total Hours Worked":
