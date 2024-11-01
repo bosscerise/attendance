@@ -54,6 +54,7 @@ def get_last_check(employee_name, date, check_type):
 
 def process_check(barcode):
     now = datetime.now()
+    now = now + timedelta(hours=1)
     date = now.strftime("%Y-%m-%d")
     time = now.strftime("%H:%M:%S")
 
@@ -123,6 +124,7 @@ def register_employee(employee_name, barcode):
 # New functions for additional pages
 def get_current_attendance():
     now = datetime.now()
+    now = now + timedelta(hours=1)
     date = now.strftime("%Y-%m-%d")
     
     all_employees = db.collection('employees').stream()
@@ -163,7 +165,6 @@ page = st.sidebar.radio("Go to", ["Login", "Check In/Out", "View Total Hours Wor
 
 if page == "Login":
     st.title("Login")
-    print(time.tzname)
     with st.form("login_form"):
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
@@ -191,8 +192,9 @@ if st.session_state.get('authenticated') or st.session_state.get('authenticatend
     elif page == "Current Attendance":
         st.title("Current Attendance Status")
         current_status = get_current_attendance()
+        realtime = datetime.now() + timedelta(hours=1)
         
-        st.write("Last updated:", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        st.write("Last updated:", realtime.strftime("%Y-%m-%d %H:%M:%S"))
         
         col1, col2 = st.columns(2)
         
