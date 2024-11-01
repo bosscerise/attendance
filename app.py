@@ -163,7 +163,7 @@ page = st.sidebar.radio("Go to", ["Login", "Check In/Out", "View Total Hours Wor
 
 if page == "Login":
     st.title("Login")
-    st.write(time.tzname)
+    print(time.tzname)
     with st.form("login_form"):
         username = st.text_input("Username")
         password = st.text_input("Password", type="password")
