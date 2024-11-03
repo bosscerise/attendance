@@ -2,4 +2,3 @@ streamlit
 st-login-form
 firebase-admin
 pandas
-plotly

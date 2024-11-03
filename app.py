@@ -6,7 +6,6 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 import time
 import pytz
 import pandas as pd
-import plotly.express as px
 
 # Firebase initialization
 def init_firebase():
@@ -245,7 +244,8 @@ if st.session_state.get('authenticated') or st.session_state.get('authenticatend
             st.rerun()
 
 
-    elif page == "View Total Hours Worked":
+if st.session_state.get('authenticatend'):
+    if page == "View Total Hours Worked":
         st.title("Total Hours Worked")
         employee_records = db.collection('employees').get()
         employee_names = [record.to_dict().get('employee_name') for record in employee_records]
@@ -266,6 +266,8 @@ if st.session_state.get('authenticated') or st.session_state.get('authenticatend
                 total_hours = calculate_total_work_time(selected_employee, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
                 st.success(f"Total hours worked by {selected_employee} from {start_date} to {end_date}: {total_hours}")
 
+
+    elif page == "Employee Timeline":
         st.title("Employee Timeline and Attendance Management")
 
         # Employee selection
@@ -288,12 +290,13 @@ if st.session_state.get('authenticated') or st.session_state.get('authenticatend
                 df = pd.DataFrame(timeline_data)
                 df['datetime'] = pd.to_datetime(df['date'] + ' ' + df['time'])
 
-                # Create an interactive timeline using Plotly
-                fig = px.timeline(df, x_start="datetime", x_end="datetime", y="check_type", color="check_type",
-                                  labels={"datetime": "Date and Time", "check_type": "Check Type"},
-                                  title=f"Timeline for {selected_employee}")
-                fig.update_yaxes(categoryorder="array", categoryarray=["Check In", "Check Out"])
-                st.plotly_chart(fig)
+                # Create a simple timeline using Streamlit's built-in chart
+                st.subheader(f"Timeline for {selected_employee}")
+                chart_data = pd.DataFrame({
+                    'Date': df['datetime'],
+                    'Check Type': df['check_type']
+                })
+                st.line_chart(chart_data.set_index('Date'))
 
                 # Display attendance records with CRUD operations
                 st.subheader("Attendance Records")
