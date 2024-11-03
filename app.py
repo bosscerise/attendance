@@ -158,15 +158,24 @@ def get_employee_timeline(employee_name, start_date, end_date):
                   .order_by('time')
                   .stream())
         
+        check_in_time = None
         for check in checks:
             check_data = check.to_dict()
-            timeline.append({
-                'date': date_str,
-                'time': check_data['time'],
-                'check_type': check_data['check_type']
-            })
+            if check_data['check_type'] == 'Check In':
+                check_in_time = datetime.strptime(f"{date_str} {check_data['time']}", "%Y-%m-%d %H:%M:%S")
+            elif check_data['check_type'] == 'Check Out' and check_in_time:
+                check_out_time = datetime.strptime(f"{date_str} {check_data['time']}", "%Y-%m-%d %H:%M:%S")
+                duration = (check_out_time - check_in_time).total_seconds() / 3600  # Duration in hours
+                timeline.append({
+                    'date': date_str,
+                    'start_time': check_in_time.strftime("%H:%M:%S"),
+                    'end_time': check_out_time.strftime("%H:%M:%S"),
+                    'duration': duration
+                })
+                check_in_time = None
     
     return timeline
+
 
 # New function to update attendance record
 def update_attendance(doc_id, new_time):
@@ -288,45 +297,61 @@ if st.session_state.get('authenticatend'):
             if timeline_data:
                 # Create a DataFrame for the timeline
                 df = pd.DataFrame(timeline_data)
-                df['datetime'] = pd.to_datetime(df['date'] + ' ' + df['time'])
 
-                # Create a simple timeline using Streamlit's built-in chart
-                st.subheader(f"Timeline for {selected_employee}")
-                chart_data = pd.DataFrame({
-                    'Date': df['datetime'],
-                    'Check Type': df['check_type']
-                })
-                st.line_chart(chart_data.set_index('Date'))
+                # Create a bar chart using Streamlit
+                st.subheader(f"Work Sessions for {selected_employee}")
+                chart = st.bar_chart(
+                    df.set_index('date')['duration'],
+                    use_container_width=True,
+                    height=400
+                )
+
+                # Display total hours worked
+                total_hours = df['duration'].sum()
+                st.metric("Total Hours Worked", f"{total_hours:.2f} hours")
 
                 # Display attendance records with CRUD operations
                 st.subheader("Attendance Records")
                 for record in timeline_data:
-                    with st.expander(f"{record['date']} - {record['check_type']} at {record['time']}"):
-                        doc_id = f"{selected_employee}_{record['date']}_{record['check_type']}_{record['time']}"
+                    with st.expander(f"{record['date']} - {record['start_time']} to {record['end_time']} ({record['duration']:.2f} hours)"):
+                        doc_id = f"{selected_employee}_{record['date']}_{record['start_time']}"
                         
-                        # Edit time
-                        new_time = st.time_input("Edit time", datetime.strptime(record['time'], "%H:%M:%S").time())
+                        # Edit start time
+                        new_start_time = st.time_input("Edit start time", datetime.strptime(record['start_time'], "%H:%M:%S").time())
+                        
+                        # Edit end time
+                        new_end_time = st.time_input("Edit end time", datetime.strptime(record['end_time'], "%H:%M:%S").time())
+                        
                         if st.button("Update", key=f"update_{doc_id}"):
-                            update_attendance(doc_id, new_time.strftime("%H:%M:%S"))
+                            update_attendance(doc_id, new_start_time.strftime("%H:%M:%S"))
+                            update_attendance(f"{selected_employee}_{record['date']}_{record['end_time']}", new_end_time.strftime("%H:%M:%S"))
+                            st.success("Attendance record updated successfully!")
+                            st.rerun()
                         
                         # Delete record
                         if st.button("Delete", key=f"delete_{doc_id}"):
                             delete_attendance(doc_id)
+                            delete_attendance(f"{selected_employee}_{record['date']}_{record['end_time']}")
+                            st.success("Attendance record deleted successfully!")
                             st.rerun()
 
                 # Add new attendance record
                 st.subheader("Add New Attendance Record")
                 new_date = st.date_input("Date", value=datetime.now())
-                new_time = st.time_input("Time", value=datetime.now().time())
-                new_check_type = st.selectbox("Check Type", ["Check In", "Check Out"])
+                new_start_time = st.time_input("Start Time", value=datetime.now().time())
+                new_end_time = st.time_input("End Time", value=(datetime.now() + timedelta(hours=8)).time())
                 if st.button("Add Record"):
-                    insert_attendance(selected_employee, new_check_type, new_date.strftime("%Y-%m-%d"), new_time.strftime("%H:%M:%S"))
+                    insert_attendance(selected_employee, "Check In", new_date.strftime("%Y-%m-%d"), new_start_time.strftime("%H:%M:%S"))
+                    insert_attendance(selected_employee, "Check Out", new_date.strftime("%Y-%m-%d"), new_end_time.strftime("%H:%M:%S"))
+                    st.success("New attendance record added successfully!")
                     st.rerun()
 
             else:
                 st.info("No records found for the selected date range.")
         else:
             st.error("Start date must be before or equal to end date.")
+
+
 
     elif page == "Register New Employee":
         st.title("Register New Employee")
