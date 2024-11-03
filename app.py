@@ -5,6 +5,8 @@ from firebase_admin import credentials, firestore, initialize_app
 from google.cloud.firestore_v1.base_query import FieldFilter
 import time
 import pytz
+import pandas as pd
+import plotly.express as px
 
 # Firebase initialization
 def init_firebase():
@@ -142,26 +144,55 @@ def get_current_attendance():
 
     return current_status
 
-def get_employee_timeline(employee_name, date):
+
+
+# New function to get employee timeline
+def get_employee_timeline(employee_name, start_date, end_date):
     timeline = []
-    checks = (db.collection('attendance')
-              .where(filter=FieldFilter('employee_name', '==', employee_name))
-              .where(filter=FieldFilter('date', '==', date))
-              .order_by('time', direction=firestore.Query.DESCENDING)
-              .order_by('check_type', direction=firestore.Query.ASCENDING)
-              .stream())
-
-    for check in checks:
-        check_data = check.to_dict()
-        timeline.append((check_data['time'], check_data['check_type']))
-
+    date_range = pd.date_range(start=start_date, end=end_date)
+    
+    for date in date_range:
+        date_str = date.strftime("%Y-%m-%d")
+        checks = (db.collection('attendance')
+                  .where(filter=FieldFilter('employee_name', '==', employee_name))
+                  .where(filter=FieldFilter('date', '==', date_str))
+                  .order_by('time')
+                  .stream())
+        
+        for check in checks:
+            check_data = check.to_dict()
+            timeline.append({
+                'date': date_str,
+                'time': check_data['time'],
+                'check_type': check_data['check_type']
+            })
+    
     return timeline
+
+# New function to update attendance record
+def update_attendance(doc_id, new_time):
+    try:
+        doc_ref = db.collection('attendance').document(doc_id)
+        doc_ref.update({'time': new_time})
+        st.success("Attendance record updated successfully!")
+    except Exception as e:
+        st.error(f"An error occurred while updating the attendance record: {e}")
+
+# New function to delete attendance record
+def delete_attendance(doc_id):
+    try:
+        db.collection('attendance').document(doc_id).delete()
+        st.success("Attendance record deleted successfully!")
+    except Exception as e:
+        st.error(f"An error occurred while deleting the attendance record: {e}")
+
+
 
 # Streamlit UI
 st.set_page_config(page_title="Employee Attendance System", layout="wide")
 
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to", ["Login", "Check In/Out", "View Total Hours Worked", "Register New Employee", "Current Attendance"])
+page = st.sidebar.radio("Go to", ["Login", "Check In/Out", "View Total Hours Worked", "Register New Employee", "Current Attendance", "Employee Timeline"])
 
 if page == "Login":
     st.title("Login")
@@ -214,8 +245,7 @@ if st.session_state.get('authenticated') or st.session_state.get('authenticatend
             st.rerun()
 
 
-if st.session_state.get('authenticatend'):
-    if page == "View Total Hours Worked":
+    elif page == "View Total Hours Worked":
         st.title("Total Hours Worked")
         employee_records = db.collection('employees').get()
         employee_names = [record.to_dict().get('employee_name') for record in employee_records]
@@ -236,57 +266,64 @@ if st.session_state.get('authenticatend'):
                 total_hours = calculate_total_work_time(selected_employee, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
                 st.success(f"Total hours worked by {selected_employee} from {start_date} to {end_date}: {total_hours}")
 
+        st.title("Employee Timeline and Attendance Management")
 
-#    elif page == "Employee Timeline":
-#        st.title("Employee Timeline")
-#
-#        # Get list of employees
-#        employees = [doc.to_dict()['employee_name'] for doc in db.collection('employees').stream()]
-#
         # Employee selection
-#        selected_employee = st.selectbox("Select Employee", employees)
-#
-        # Date selection
-#        selected_date = st.date_input("Select Date", value=datetime.now())
-#
-#        if st.button("Show Timeline"):
-#            # Convert date to string format
-#            date_str = selected_date.strftime("%Y-%m-%d")
-#
-#            # Get timeline data
- #           timeline = get_employee_timeline(selected_employee, date_str)
-#
-#            if timeline:
-#                st.subheader(f"Timeline for {selected_employee} on {selected_date}")
-#            
-#                # Create two columns for Check In and Check Out
-#                col1, col2 = st.columns(2)
-#            
-#                with col1:
-#                    st.write("Check In Times:")
-#                    for time, check_type in timeline:
-#                        if check_type == "Check In":
-#                            st.write(f"- {time}")
-#            
-#                with col2:
-#                    st.write("Check Out Times:")
-#                    for time, check_type in timeline:
-#                        if check_type == "Check Out":
-#                            st.write(f"- {time}")
-#
-#                # Calculate and display total work time
-#                check_ins = [datetime.strptime(time, "%H:%M:%S") for time, check_type in timeline if check_type == "Check In"]
-#                check_outs = [datetime.strptime(time, "%H:%M:%S") for time, check_type in timeline if check_type == "Check Out"]
-#            
-#                total_time = timedelta()
-#                for cin, cout in zip(check_ins, check_outs):
-#                    total_time += cout - cin
-#
-#                st.subheader("Total Work Time")
-#                st.write(f"{total_time.total_seconds() // 3600:02.0f}:{(total_time.total_seconds() % 3600) // 60:02.0f}")
-#
-#            else:
-#                st.info("No records found for the selected date.")
+        employees = [doc.to_dict()['employee_name'] for doc in db.collection('employees').stream()]
+        selected_employee = st.selectbox("Select Employee", employees)
+
+        # Date range selection
+        col1, col2 = st.columns(2)
+        with col1:
+            start_date = st.date_input("Start Date", value=datetime.now() - timedelta(days=7))
+        with col2:
+            end_date = st.date_input("End Date", value=datetime.now())
+
+        if start_date <= end_date:
+            # Fetch timeline data
+            timeline_data = get_employee_timeline(selected_employee, start_date, end_date)
+
+            if timeline_data:
+                # Create a DataFrame for the timeline
+                df = pd.DataFrame(timeline_data)
+                df['datetime'] = pd.to_datetime(df['date'] + ' ' + df['time'])
+
+                # Create an interactive timeline using Plotly
+                fig = px.timeline(df, x_start="datetime", x_end="datetime", y="check_type", color="check_type",
+                                  labels={"datetime": "Date and Time", "check_type": "Check Type"},
+                                  title=f"Timeline for {selected_employee}")
+                fig.update_yaxes(categoryorder="array", categoryarray=["Check In", "Check Out"])
+                st.plotly_chart(fig)
+
+                # Display attendance records with CRUD operations
+                st.subheader("Attendance Records")
+                for record in timeline_data:
+                    with st.expander(f"{record['date']} - {record['check_type']} at {record['time']}"):
+                        doc_id = f"{selected_employee}_{record['date']}_{record['check_type']}_{record['time']}"
+                        
+                        # Edit time
+                        new_time = st.time_input("Edit time", datetime.strptime(record['time'], "%H:%M:%S").time())
+                        if st.button("Update", key=f"update_{doc_id}"):
+                            update_attendance(doc_id, new_time.strftime("%H:%M:%S"))
+                        
+                        # Delete record
+                        if st.button("Delete", key=f"delete_{doc_id}"):
+                            delete_attendance(doc_id)
+                            st.rerun()
+
+                # Add new attendance record
+                st.subheader("Add New Attendance Record")
+                new_date = st.date_input("Date", value=datetime.now())
+                new_time = st.time_input("Time", value=datetime.now().time())
+                new_check_type = st.selectbox("Check Type", ["Check In", "Check Out"])
+                if st.button("Add Record"):
+                    insert_attendance(selected_employee, new_check_type, new_date.strftime("%Y-%m-%d"), new_time.strftime("%H:%M:%S"))
+                    st.rerun()
+
+            else:
+                st.info("No records found for the selected date range.")
+        else:
+            st.error("Start date must be before or equal to end date.")
 
     elif page == "Register New Employee":
         st.title("Register New Employee")
